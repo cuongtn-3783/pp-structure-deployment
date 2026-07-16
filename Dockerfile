@@ -55,14 +55,18 @@ COPY scripts ./scripts
 
 # 3. Bake model weights into the image (CPU instantiation; no GPU at build time).
 #    The paddlepaddle-gpu wheel links libcuda.so.1 (the NVIDIA driver), loaded at
-#    `import paddle` even with device="cpu". The container runtime injects the
-#    real driver only at `--gpus` runtime, not during build. Point the loader at
-#    a libcuda the base image already ships (cuda-compat's real driver under
-#    /usr/local/cuda/compat, or the CUDA driver stub) so the import succeeds;
-#    the host driver overrides it when the container actually runs on a GPU.
+#    `import paddle` even with device="cpu". The runtime CUDA base image ships no
+#    libcuda at all, and the container runtime injects the real driver only at
+#    `--gpus` runtime, not during build. Install NVIDIA's cuda-compat package — a
+#    real, loadable libcuda.so.1 that needs no kernel driver — purely to satisfy
+#    the import; the host driver overrides it when the container runs on a GPU.
+#    Package name is derived from CUDA_VERSION (e.g. 13.0.0 -> cuda-compat-13-0).
 RUN set -eux; \
-    lib="$(find /usr/local/cuda -name 'libcuda.so*' 2>/dev/null | head -n1)"; \
-    [ -n "$lib" ] || { echo "no libcuda.so in base image" >&2; exit 1; }; \
+    compat="cuda-compat-$(echo "${CUDA_VERSION}" | cut -d. -f1)-$(echo "${CUDA_VERSION}" | cut -d. -f2)"; \
+    apt-get update && apt-get install -y --no-install-recommends "$compat"; \
+    rm -rf /var/lib/apt/lists/*; \
+    lib="$(find / -name 'libcuda.so*' 2>/dev/null | head -n1)"; \
+    [ -n "$lib" ] || { echo "no libcuda.so found after installing $compat" >&2; exit 1; }; \
     dir="$(dirname "$lib")"; \
     [ -e "$dir/libcuda.so.1" ] || ln -sf "$lib" "$dir/libcuda.so.1"; \
     LD_LIBRARY_PATH="$dir:${LD_LIBRARY_PATH}" uv run python scripts/warm_weights.py
