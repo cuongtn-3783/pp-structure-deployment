@@ -1,0 +1,13 @@
+.git
+.gitignore
+.venv
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.claude
+.python-version
+tests
+docs
+# Exclude docs/markdown but keep README.md (referenced by pyproject and copied).
+*.md
+!README.md
