@@ -39,12 +39,16 @@ RUN uv sync --frozen --no-dev
 #    the index stays a build ARG and CPU CI never pulls them).
 #    unsafe-best-match: paddleocr also appears on the Paddle index (older
 #    version), so the default first-index strategy never sees 3.7.0 on PyPI.
+#    paddlex[ocr]: PP-StructureV3 needs paddlex's OCR extra (extra model deps);
+#    it's unversioned so the resolver pins it to the paddlex that paddleocr==3.7.0
+#    requires and just adds the missing extra.
 RUN uv pip install \
         --index-strategy unsafe-best-match \
         --index-url https://pypi.org/simple \
         --extra-index-url ${PADDLE_INDEX_URL} \
         "paddlepaddle-gpu==3.2.1" \
-        "paddleocr==3.7.0"
+        "paddleocr==3.7.0" \
+        "paddlex[ocr]"
 
 COPY main.py ./
 COPY scripts ./scripts
