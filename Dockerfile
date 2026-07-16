@@ -17,12 +17,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 # (so `uv sync` would otherwise pick the newest 3.14 and fail the ABI match).
 ENV UV_PYTHON=3.12
 
-# OpenCV (a PaddleOCR dep) needs libGL / libglib at runtime.
+# Runtime shared libs: OpenCV (a PaddleOCR dep) needs libGL / libglib; Paddle's
+# libpaddle.so links libgomp (GNU OpenMP), absent from the CUDA runtime image.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
         libgl1 \
         libglib2.0-0 \
+        libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # uv (also provides a managed Python 3.12 so the base image needs no python).
