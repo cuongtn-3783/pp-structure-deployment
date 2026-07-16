@@ -12,6 +12,11 @@ ARG PADDLE_INDEX_URL=https://www.paddlepaddle.org.cn/packages/stable/${CUDA_INDE
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Pin the managed Python for every uv command. requires-python allows up to 3.14,
+# but Paddle only ships wheels through cp313, and .python-version is dockerignored
+# (so `uv sync` would otherwise pick the newest 3.14 and fail the ABI match).
+ENV UV_PYTHON=3.12
+
 # OpenCV (a PaddleOCR dep) needs libGL / libglib at runtime.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -32,7 +37,10 @@ RUN uv sync --frozen --no-dev
 
 # 2. Install pinned GPU deps from the Paddle CUDA index (kept out of the lock so
 #    the index stays a build ARG and CPU CI never pulls them).
+#    unsafe-best-match: paddleocr also appears on the Paddle index (older
+#    version), so the default first-index strategy never sees 3.7.0 on PyPI.
 RUN uv pip install \
+        --index-strategy unsafe-best-match \
         --index-url https://pypi.org/simple \
         --extra-index-url ${PADDLE_INDEX_URL} \
         "paddlepaddle-gpu==3.2.1" \
